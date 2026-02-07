@@ -107,13 +107,11 @@ useHead({
 }
 
 .clock-display {
-  font-size: min(18vw, 300px); /* Responsive size with a maximum cap */
+  font-size: min(21vw, 50vh); /* Tightly fit 8 characters across the width */
   font-weight: 700;
   line-height: 1;
   text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
   white-space: nowrap;
-  width: 100%;
-  max-width: 1400px;
   text-align: center;
 }
 
