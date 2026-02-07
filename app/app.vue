@@ -21,6 +21,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 
 const currentTime = ref('')
 const isFullscreen = ref(false)
+let wakeLock: WakeLockSentinel | null = null
 
 const updateTime = () => {
   const now = new Date()
@@ -28,6 +29,25 @@ const updateTime = () => {
   const minutes = String(now.getMinutes()).padStart(2, '0')
   const seconds = String(now.getSeconds()).padStart(2, '0')
   currentTime.value = `${hours}:${minutes}:${seconds}`
+}
+
+const requestWakeLock = async () => {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen')
+      wakeLock.addEventListener('release', () => {
+        console.log('Wake Lock was released')
+      })
+    } catch (err: any) {
+      console.error(`${err.name}, ${err.message}`)
+    }
+  }
+}
+
+const handleVisibilityChange = async () => {
+  if (wakeLock !== null && document.visibilityState === 'visible') {
+    await requestWakeLock()
+  }
 }
 
 const toggleFullscreen = () => {
@@ -46,15 +66,22 @@ const handleFullscreenChange = () => {
 
 let timer: ReturnType<typeof setInterval>
 
-onMounted(() => {
+onMounted(async () => {
   updateTime()
   timer = setInterval(updateTime, 1000)
   document.addEventListener('fullscreenchange', handleFullscreenChange)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  await requestWakeLock()
 })
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  if (wakeLock) {
+    wakeLock.release()
+    wakeLock = null
+  }
 })
 
 useHead({
@@ -80,11 +107,14 @@ useHead({
 }
 
 .clock-display {
-  font-size: 18vw; /* Adjusted to fit HH:MM:SS on screen */
+  font-size: min(18vw, 300px); /* Responsive size with a maximum cap */
   font-weight: 700;
   line-height: 1;
   text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
   white-space: nowrap;
+  width: 100%;
+  max-width: 1400px;
+  text-align: center;
 }
 
 .fullscreen-button {
